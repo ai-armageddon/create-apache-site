@@ -16,7 +16,7 @@ create_directory() {
     # Create a temporary script file with variable updates
     temp_script="$directory/temp_script.sh"
     echo "#!/bin/bash" > "$temp_script"
-    echo "sed -i 's/{NAME}/Jane/g' $output_file" >> "$temp_script"
+    echo "sed -i 's/{{DOMAIN_NAME}}/$domain/g' $output_file" >> "$temp_script"
     chmod +x "$temp_script"
 
     # Execute the temporary script within the directory
@@ -26,53 +26,44 @@ create_directory() {
     rm "$temp_script"
 }
 
-# create NGINX config file
-create_nginx_config() {
+# create Apache config file
+create_apache_config() {
     domain=$1
-    port=$2
     template_file="./assets/server/template.conf"
-    config_file="/etc/nginx/sites-available/$domain.conf"
+    config_file="/etc/apache2/sites-available/$domain.conf"
 
-    # Replace variables in the template file
+    # replace variables in the template file
     cp "$template_file" "$config_file"
     sed -i "s/{{DOMAIN_NAME}}/$domain/g" "$config_file"
-    sed -i "s/{{APP_PORT}}/$port/g" "$config_file"
 
-    echo "Created NGINX configuration file: $config_file"
+    echo "Created Apache configuration file: $config_file"
 }
 
-# Function to create a symbolic link in sites-enabled
-create_nginx_symlink() {
+# enable website
+enable_site() {
     domain=$1
-    config_file="/etc/nginx/sites-available/$domain"
-    symlink="/etc/nginx/sites-enabled/$domain"
+    config_file="/etc/apache2/sites-available/$domain.conf"
+    
+    a2ensite "$domain.conf"
 
-    ln -s "$config_file" "$symlink"
+    echo "Apache website enabled"
 
-    echo "Created symbolic link in sites-enabled: $symlink"
+    # reload, restart Apache
+    systemctl reload apache2
+    systemctl restart apache2
 
-    # reload, restart NGINX
-    systemctl reload nginx
-    systemctl restart nginx
-
-    # handle errors if NGINX fails to reload or restart
+    # handle errors if Apache fails to reload or restart
     if [[ $? -ne 0 ]]; then
-        echo "Error: failed to reload or restart NGINX."
+        echo "Error: failed to reload or restart Apache."
         exit 1
     fi
 }
 
-# run Certbot to obtain SSL certs
+# obtain SSL certs with Certbot
 run_certbot() {
     domain="$1"
-    port="$2"
 
-    # Create a PM2 process to serve the static project on the specified port
-    pm2 start "npx serve -s /var/www/$domain/public_html -l $port" --name "$domain"
-    pm2 save
-    echo "Started PM2 process for $domain on port $port"
-
-    certbot certonly --nginx -d "$domain" -d "www.$domain"
+    certbot --apache -d "$domain" -d "www.$domain" --redirect
 
     echo "Obtained SSL certificates for domain: $domain"
 
@@ -84,19 +75,14 @@ run_certbot() {
 
 # print usage
 print_usage() {
-    echo "Usage: $0 -d|--domain <domain_name> [-p|--port <port>] [--no-ssl] [-h|--help]"
+    echo "Usage: $0 -d|--domain <domain_name> [--no-ssl] [-h|--help]"
 }
 
-# main script
 # parse command line arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -d|--domain)
             domain_name="$2"
-            shift 2
-            ;;
-        -p|--port)
-            port="$2"
             shift 2
             ;;
         --ssl)
@@ -122,18 +108,13 @@ if [[ -z "$domain_name" ]]; then
     exit 1
 fi
 
-if [[ -z "$port" ]]; then
-    port=3001
-fi
-
 echo "Domain: $domain_name"
-echo "Port: $port"
 
 # call the functions
 create_directory "$domain_name"
-create_nginx_config "$domain_name" "$port"
-create_nginx_symlink "$domain_name"
-
+create_apache_config "$domain_name"
+enable_site "$domain_name"
+    
 # Run certbot if --ssl flag is passed
 if [[ "$ssl" == true ]]; then
     echo "SSL: enabled"

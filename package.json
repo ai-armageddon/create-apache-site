@@ -1,16 +1,26 @@
 {
-  "name": "create-nginx-site",
+  "name": "create-apache-site",
   "version": "4.2.0",
-  "description": "Create new NGINX website+SSL on Ubuntu",
+  "description": "Create new APACHE website+SSL on Ubuntu",
   "bin": {
-    "create-nginx-site": "./script/create-nginx-site.sh"
+    "create-apache-site": "./script/create-apache-site.sh"
   },
-  "keywords": [],
+  "keywords": [
+    "apache",
+    "website",
+    "SSL",
+    "Ubuntu",
+    "server",
+    "web development",
+    "web hosting",
+    "configuration",
+    "Apache site"
+  ],
   "author": "ai-armageddon",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ai-armageddon/create-nginx-site.git"
+    "url": "https://github.com/ai-armageddon/create-apache-site.git"
   },
   "homepage": "https://fafoscience.org/",
 }
