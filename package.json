@@ -1,6 +1,6 @@
 {
   "name": "create-apache-site",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Create new APACHE website dir, config and issue SSL on Ubuntu",
   "bin": {
     "create-apache-site": "./script/create-apache-site.sh"
