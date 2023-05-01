@@ -1,26 +1,32 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# executing script directory
+script_dir="$PWD"
 
 # create the directory structure
 create_directory() {
     domain="$1"
-    directory="/var/www/$domain/public_html"
 
-    mkdir -p "$directory"
+    # script directory
+    static_dir="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")/assets/static"
 
-    # copy HTML files to site directories
-    cp -R ./assets/static/. "$directory"
+    # Create directory if it doesn't exist
+    mkdir -p "/var/www/$domain/public_html"
+
+    # Copy HTML files to site directories
+    cp -R "$static_dir"/* "/var/www/$domain/public_html/"
 
     # Specify output file
-    output_file="index.html"
+    output_file="/var/www/$domain/public_html/index.html"
 
     # Create a temporary script file with variable updates
-    temp_script="$directory/temp_script.sh"
+    temp_script="/var/www/$domain/public_html/temp_script.sh"
     echo "#!/bin/bash" > "$temp_script"
     echo "sed -i 's/{{DOMAIN_NAME}}/$domain/g' $output_file" >> "$temp_script"
     chmod +x "$temp_script"
 
     # Execute the temporary script within the directory
-    (cd "$directory" && ./temp_script.sh)
+    (cd "/var/www/$domain/public_html" && ./temp_script.sh)
 
     # Delete the temporary script file
     rm "$temp_script"
@@ -29,7 +35,8 @@ create_directory() {
 # create Apache config file
 create_apache_config() {
     domain=$1
-    template_file="./assets/server/template.conf"
+    server_dir="$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")/assets/server"
+    template_file="$server_dir/template.conf"
     config_file="/etc/apache2/sites-available/$domain.conf"
 
     # replace variables in the template file
@@ -63,7 +70,7 @@ enable_site() {
 run_certbot() {
     domain="$1"
 
-    certbot --apache -d "$domain" -d "www.$domain" --redirect
+    certbot --apache -d "$domain" -d "www.$domain" --redirect --non-interactive
 
     echo "Obtained SSL certificates for domain: $domain"
 
